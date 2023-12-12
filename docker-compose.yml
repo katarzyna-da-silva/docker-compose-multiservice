@@ -1,0 +1,101 @@
+version: '3'
+
+services:
+
+  # WP
+  mysql_db:
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: mySuperPassword123
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  wordpress:
+    image: wordpress
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: mysql_db:3306
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+    volumes:
+      - wordpress:/var/www/html
+
+  # Wikijs
+  postgres_db_wikijs:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: wikijs
+      POSTGRES_USER: wikijs
+      POSTGRES_PASSWORD: PostGresPassword123
+    volumes:
+      - pgdata_db_wikijs:/var/lib/postgresql/data
+
+  wikijs:
+    image: ghcr.io/linuxserver/wikijs
+    restart: always
+    ports:
+      - "8081:3000"
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: "Euirope/Warsaw"
+      POSTGRES_TYPE: postgres
+      POSTGRES_HOST: postgres_db_wikijs
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: wikijs
+      POSTGRES_PASS: PostGresPassword123
+      POSTGRES_NAME: wikijs
+    volumes:
+      - wikijs_data:/config
+    depends_on:
+      - postgres_db_wikijs
+
+  # Write freely
+  mariadb_writefreely:
+    image: mariadb
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: mySuperPassword123
+      MARIADB_DATABASE: writefreely
+      MARIADB_USER: writefreely
+      MARIADB_PASSWORD: writefreely
+    volumes:
+      - mariadb_writefreely_data:/var/lib/mysql
+
+  writefreely:
+    image: algernon/writefreely
+    restart: always
+    ports:
+      - "8082:8080"
+    #language=shell
+    entrypoint: ["/bin/sh","-c"]
+    command:
+      - |
+        ./writefreely  keys gen
+        ./writefreely db init
+        ./writefreely db migrate
+        ./writefreely serve
+    volumes:
+      - writefreely_data:/data
+      - ./data/config.ini:/writefreely/config.ini
+    depends_on:
+      - mariadb_writefreely
+
+volumes:
+  # wordpress
+  mysql_data:
+  wordpress:
+  # wikijs
+  pgdata_db_wikijs:
+  wikijs_data:
+  # writefreely
+  mariadb_writefreely_data:
+  writefreely_data:
